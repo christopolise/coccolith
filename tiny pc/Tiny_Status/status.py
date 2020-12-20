@@ -3,7 +3,7 @@
 """
 Quick data fetching script to populate oled display
 
-https://github.com/christopolise/oled_sysfetch
+https://github.com/christopolise/coccolith
 
 AUTHORED BY: Chris Kitras
 LAST DATE MODIFIED: 2020-12-20
@@ -49,7 +49,16 @@ lscpuinfo.stdout.close()
 string2 = grepspeed.decode('utf-8')
 max_cpu_speed = int(float(string2.split()[3]))
 
+# Arch of CPU
+lscpuarch = subprocess.Popen(('lscpu'), stdout=subprocess.PIPE)
+arch_grep = subprocess.check_output(
+    ('grep', 'Architecture'), stdin=lscpuarch.stdout)
+lscpuarch.stdout.close()
+arch_str = arch_grep.decode('utf-8')
+arch_str = arch_str.rstrip()
+arch_str = arch_str.split()[1]
 
+# Format will be {'Name  ': [val, 1=percentage, 0=txt]}
 sysinfo = {}
 
 
@@ -66,11 +75,10 @@ def fetch_disk():
 
 
 def fetch_cpu():
-    print("cpu")
     # Check to see if there are more than 4 CPUs (zero indexed)
 
     # Too big for screen, only report average
-    if num_of_cpu > MAX_LINE:
+    if num_of_cpu > 10 + MAX_LINE:
         cpu_mhz_line = subprocess.Popen(
             ('lscpu'), stdout=subprocess.PIPE)
         grep_cpu_load = subprocess.check_output(
@@ -79,9 +87,14 @@ def fetch_cpu():
         load_str = grep_cpu_load.decode('utf-8')
         load_str = load_str.rstrip()
         avg_cpu_load = max_cpu_speed - float(re.sub("[^0-9.]", "", load_str))
-        percentage = int(avg_cpu_load/max_cpu_speed * 100)
-        sysinfo["CPU   "] = percentage
+        percentage = float(avg_cpu_load/max_cpu_speed * 100)
 
+        sysinfo["CPU   "] = [percentage, 1]
+        sysinfo["Cores "] = [num_of_cpu, 0]
+        sysinfo["Max sp"] = [max_cpu_speed, 0]
+        sysinfo["Arch  "] = [arch_str, 0]
+
+    # Can include all of the cores :D
     else:
         cpu_group = subprocess.Popen(
             ('cat', '/proc/cpuinfo'), stdout=subprocess.PIPE)
@@ -95,9 +108,9 @@ def fetch_cpu():
             grep_str[core] = max_cpu_speed - \
                 float(re.sub("[^0-9.]", "", grep_str[core]))
             sysinfo["CPU" + str(core) +
-                    "  "] = int(grep_str[core]/max_cpu_speed * 100)
+                    "  "] = [int(grep_str[core]/max_cpu_speed * 100), 1]
 
-        print(sysinfo)
+    print(sysinfo)
 
     time.sleep(1)
 
@@ -153,8 +166,6 @@ def update_tick():
     elif(CUR_STATE == UPTIME_STATE):
         uptime_timer += 1
         fetch_uptime()
-
-    to_serial()
 
 
 def main():
