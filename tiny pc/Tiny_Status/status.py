@@ -20,10 +20,10 @@ MEM_STATE = 1
 DISK_STATE = 2
 CPU_STATE = 3
 UPTIME_STATE = 4
-CPU_TIMER_MAX = 60
-UPTIME_TIMER_MAX = 60
-MEM_TIMER_MAX = 60
-DISK_DELAY = 60
+CPU_TIMER_MAX = 5
+UPTIME_TIMER_MAX = 5
+MEM_TIMER_MAX = 5
+DISK_DELAY = 5
 
 cpu_timer = 0
 uptime_timer = 0
@@ -47,7 +47,6 @@ grepspeed = subprocess.check_output(
     ('grep', 'CPU max MHz'), stdin=lscpuinfo.stdout)
 lscpuinfo.stdout.close()
 string2 = grepspeed.decode('utf-8')
-# ad_cpu_speed = int(float(re.sub("[^0-9.]", "", string2.split()[7])) * 1000)
 max_cpu_speed = int(float(string2.split()[3]))
 
 
@@ -71,7 +70,7 @@ def fetch_cpu():
     # Check to see if there are more than 4 CPUs (zero indexed)
 
     # Too big for screen, only report average
-    if num_of_cpu > 4:
+    if num_of_cpu > MAX_LINE:
         cpu_mhz_line = subprocess.Popen(
             ('lscpu'), stdout=subprocess.PIPE)
         grep_cpu_load = subprocess.check_output(
@@ -84,7 +83,21 @@ def fetch_cpu():
         sysinfo["CPU   "] = percentage
 
     else:
-        pass
+        cpu_group = subprocess.Popen(
+            ('cat', '/proc/cpuinfo'), stdout=subprocess.PIPE)
+        grep_group = subprocess.check_output(
+            ('grep', 'cpu MHz'), stdin=cpu_group.stdout)
+        cpu_group.stdout.close()
+        grep_str = grep_group.decode('utf-8')
+        grep_str = grep_str.rstrip()
+        grep_str = grep_str.split('\n')
+        for core in range(len(grep_str)):
+            grep_str[core] = max_cpu_speed - \
+                float(re.sub("[^0-9.]", "", grep_str[core]))
+            sysinfo["CPU" + str(core) +
+                    "  "] = int(grep_str[core]/max_cpu_speed * 100)
+
+        print(sysinfo)
 
     time.sleep(1)
 
