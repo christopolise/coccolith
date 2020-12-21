@@ -6,7 +6,7 @@ Quick data fetching script to populate oled display
 https://github.com/christopolise/coccolith
 
 AUTHORED BY: Chris Kitras
-LAST DATE MODIFIED: 2020-12-20
+LAST DATE MODIFIED: 2020-12-21
 
 """
 
@@ -50,13 +50,26 @@ def fetch_mem():
     sysinfo["Used  "] = [str("{0:.2f}".format(float(mem_use)/1024000))+'G', 0]
     sysinfo["Usage "] = [int(float(mem_use)/float(mem_tot) * 100), 1]
 
-    print(sysinfo)
+    to_serial()
     time.sleep(1)
 
 
 def fetch_disk():
-    print("disk")
-    title = "Disk  "
+    diskinfo = subprocess.Popen(('df', '-h', '/'), stdout=subprocess.PIPE)
+    taildisk = subprocess.check_output(('tail', '-1'), stdin=diskinfo.stdout)
+    diskinfo.stdout.close()
+    taildisk = taildisk.decode('utf-8')
+    taildisk = taildisk.rstrip()
+    taildisk = taildisk.split()
+
+    percentage = int(re.sub("[^0-9.]", "", taildisk[4]))
+
+    sysinfo["Disk  "] = [taildisk[1], 0]
+    sysinfo["Used  "] = [taildisk[2], 0]
+    sysinfo["Avail "] = [taildisk[3], 0]
+    sysinfo["Usage "] = [percentage, 1]
+
+    to_serial()
     time.sleep(DISK_DELAY)
 
 
@@ -96,8 +109,7 @@ def fetch_cpu():
             sysinfo["CPU" + str(core) +
                     "  "] = [int(grep_str[core]/max_cpu_speed * 100), 1]
 
-    print(sysinfo)
-
+    to_serial()
     time.sleep(1)
 
 
@@ -153,13 +165,12 @@ def fetch_uptime():
     sysinfo['Hour  '] = [hour, 0]
     sysinfo['Minute'] = [minute, 0]
 
-    print(sysinfo)
+    to_serial()
     time.sleep(1)
 
 
 def to_serial():
-    print("sysinfo")
-    pass
+    print(sysinfo)
 
 
 def update_init():
