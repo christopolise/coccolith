@@ -36,8 +36,21 @@ arch_str = ''
 
 
 def fetch_mem():
-    print("Mem")
-    title = "Mem   "
+    meminfo = subprocess.Popen(('free'), stdout=subprocess.PIPE)
+    grepmem = subprocess.check_output(('grep', 'Mem'), stdin=meminfo.stdout)
+    meminfo.stdout.close()
+    grepmem = grepmem.decode('utf-8')
+    grepmem = grepmem.rstrip()
+    grepmem = grepmem.split()
+    mem_tot = grepmem[1]
+    mem_use = grepmem[2]
+
+    sysinfo["Memory"] = ['', 0]
+    sysinfo["Total "] = [str("{0:.2f}".format(float(mem_tot)/1024000))+'G', 0]
+    sysinfo["Used  "] = [str("{0:.2f}".format(float(mem_use)/1024000))+'G', 0]
+    sysinfo["Usage "] = [int(float(mem_use)/float(mem_tot) * 100), 1]
+
+    print(sysinfo)
     time.sleep(1)
 
 
@@ -62,7 +75,7 @@ def fetch_cpu():
         avg_cpu_load = max_cpu_speed - float(re.sub("[^0-9.]", "", load_str))
         percentage = float(avg_cpu_load/max_cpu_speed * 100)
 
-        sysinfo["CPU   "] = [percentage, 1]
+        sysinfo["CPU   "] = [int(percentage), 1]
         sysinfo["Cores "] = [num_of_cpu, 0]
         sysinfo["Max sp"] = [max_cpu_speed, 0]
         sysinfo["Arch  "] = [arch_str, 0]
